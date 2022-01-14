@@ -14,6 +14,8 @@ import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.example.mindfreshner.MySingleton
 import com.example.mindfreshner.R
+import org.json.JSONArray
+import org.json.JSONObject
 import  java.util.HashMap
 class NewsMainActivity : AppCompatActivity(), NewsItemClicked {
 
@@ -124,7 +126,7 @@ class NewsMainActivity : AppCompatActivity(), NewsItemClicked {
         var current_category:String?=null
         var current_country:String?=null
         if(countryPos==0 && categoryPos==0){
-             url = "https://newsapi.org/v2/top-headlines/sources?apiKey=86b044d08ee54346b444ab0f1ed0edcb"
+             url = "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=86b044d08ee54346b444ab0f1ed0edcb"
         }else if(countryPos==0){
             current_category = category_hashMap.get(categoryPos)
             url = "https://newsapi.org/v2/top-headlines?category=$current_category&apiKey=86b044d08ee54346b444ab0f1ed0edcb"
@@ -136,8 +138,8 @@ class NewsMainActivity : AppCompatActivity(), NewsItemClicked {
             current_country = country_hashmap.get(countryPos)
             url = "https://newsapi.org/v2/top-headlines?country=$current_country&category=$current_category&apiKey=86b044d08ee54346b444ab0f1ed0edcb"
         }
-
-        val jsonObjectRequest = JsonObjectRequest(
+        /*
+        val jsonObjectRequest = object:JsonObjectRequest(
             Request.Method.GET,
             url,
             null,
@@ -164,7 +166,49 @@ class NewsMainActivity : AppCompatActivity(), NewsItemClicked {
 
             }
         )
-        MySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest)
+        {
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["User-Agent"]="Mozilla/5.0"
+                return headers
+            }
+        }
+
+        MySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest)*/
+        val request = object: JsonObjectRequest(
+            Request.Method.GET, url, null,
+            Response.Listener {
+                Log.d("JsonObject","Success")
+                val newsJsonArray = it.getJSONArray("articles")
+                val newsArray = ArrayList<News>()
+                for(i in 0 until newsJsonArray.length()) {
+                    val newsJsonObject = newsJsonArray.getJSONObject(i)
+                    val news = News(
+                        newsJsonObject.getString("title"),
+                        newsJsonObject.getString("url"),
+                        newsJsonObject.getString("urlToImage")
+                    )
+                    newsArray.add(news)
+                }
+
+                mAdapter.updateNews(newsArray)
+                progressBar.visibility = View.GONE
+            },
+            Response.ErrorListener {
+                progressBar.visibility = View.GONE
+                Log.d("JsonObject","Failure:${it.message}")
+
+            }
+        )
+        {
+            override fun getHeaders(): MutableMap<String, String> {
+                val headers = HashMap<String, String>()
+                headers["User-Agent"]="Mozilla/5.0"
+                return headers
+            }
+        }
+
+        MySingleton.getInstance(this).addToRequestQueue(request)
     }
 
     override fun onItemClicked(item: News) {
